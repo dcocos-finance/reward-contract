@@ -558,11 +558,14 @@ pragma solidity ^0.5.0;
 
 
 
+
+
+
 contract LPTokenWrapper {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IERC20 public uni = IERC20(0xC25a3A3b969415c80451098fa907EC722572917F);
+    IERC20 public uniswapLP = IERC20(0x16cAC1403377978644e78769Daa49d8f6B6CF565);
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
@@ -578,20 +581,24 @@ contract LPTokenWrapper {
     function stake(uint256 amount) public {
         _totalSupply = _totalSupply.add(amount);
         _balances[msg.sender] = _balances[msg.sender].add(amount);
-        uni.safeTransferFrom(msg.sender, address(this), amount);
+        uniswapLP.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function withdraw(uint256 amount) public {
         _totalSupply = _totalSupply.sub(amount);
         _balances[msg.sender] = _balances[msg.sender].sub(amount);
-        uni.safeTransfer(msg.sender, amount);
+        uniswapLP.safeTransfer(msg.sender, amount);
     }
 }
 
 contract UniswapRewards is LPTokenWrapper, IRewardDistributionRecipient {
-    IERC20 public snx = IERC20(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F);
+    using SafeERC20 for IERC20;
+
+    IERC20 public dCOCOS = IERC20(0xa1d0E215a23d7030842FC67cE582a6aFa3CCaB83);
     uint256 public constant DURATION = 7 days;
 
+    uint256 public initreward = 100000000*1e18;
+    uint256 public starttime = 1595865600; //utc+8 2020 07-28 0:00:00
     uint256 public periodFinish = 0;
     uint256 public rewardRate = 0;
     uint256 public lastUpdateTime;
@@ -641,13 +648,13 @@ contract UniswapRewards is LPTokenWrapper, IRewardDistributionRecipient {
     }
 
     // stake visibility is public as overriding LPTokenWrapper's stake() function
-    function stake(uint256 amount) public updateReward(msg.sender) {
+    function stake(uint256 amount) public updateReward(msg.sender) checkhalve checkStart{ 
         require(amount > 0, "Cannot stake 0");
         super.stake(amount);
         emit Staked(msg.sender, amount);
     }
 
-    function withdraw(uint256 amount) public updateReward(msg.sender) {
+    function withdraw(uint256 amount) public updateReward(msg.sender) checkStart{
         require(amount > 0, "Cannot withdraw 0");
         super.withdraw(amount);
         emit Withdrawn(msg.sender, amount);
@@ -658,13 +665,29 @@ contract UniswapRewards is LPTokenWrapper, IRewardDistributionRecipient {
         getReward();
     }
 
-    function getReward() public updateReward(msg.sender) {
+    function getReward() public updateReward(msg.sender) checkhalve checkStart{
         uint256 reward = earned(msg.sender);
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            snx.safeTransfer(msg.sender, reward);
+            dCOCOS.safeTransfer(msg.sender, reward);
             emit RewardPaid(msg.sender, reward);
         }
+    }
+
+    modifier checkhalve(){
+        if (block.timestamp >= periodFinish) {
+            initreward = initreward.mul(50).div(100); 
+            //dCOCOS.mint(address(this),initreward);
+
+            rewardRate = initreward.div(DURATION);
+            periodFinish = block.timestamp.add(DURATION);
+            emit RewardAdded(initreward);
+        }
+        _;
+    }
+    modifier checkStart(){
+        require(block.timestamp > starttime,"not start");
+        _;
     }
 
     function notifyRewardAmount(uint256 reward)
@@ -679,6 +702,7 @@ contract UniswapRewards is LPTokenWrapper, IRewardDistributionRecipient {
             uint256 leftover = remaining.mul(rewardRate);
             rewardRate = reward.add(leftover).div(DURATION);
         }
+
         lastUpdateTime = block.timestamp;
         periodFinish = block.timestamp.add(DURATION);
         emit RewardAdded(reward);
