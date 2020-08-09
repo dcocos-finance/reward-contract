@@ -37,6 +37,7 @@
     "lint:sol:fix": "solium -d . --fix",
     "lint": "npm run lint:js && npm run lint:sol",
     "lint:fix": "npm run lint:js:fix && npm run lint:sol:fix",
+    "deploy": "scripts/deploy.sh",
     "uniswap": "truffle-flattener ./contracts/UniswapRewards.sol > UniswapRewards.full.sol && solcjs --bin --abi --optimize UniswapRewards.full.sol && mv UniswapRewards.full.sol ./deployments/UniswapRewards.full.sol && mv UniswapRewards_full_sol_UniswapRewards.bin ./deployments/UniswapRewards.full.bin && mv UniswapRewards_full_sol_UniswapRewards.abi ./deployments/UniswapRewards.full.abi && rm *_sol_*",
     "balancer": "truffle-flattener ./contracts/BalancerRewards.sol > BalancerRewards.full.sol && solcjs --bin --abi --optimize BalancerRewards.full.sol && mv BalancerRewards.full.sol ./deployments/BalancerRewards.full.sol && mv BalancerRewards_full_sol_BalancerRewards.bin ./deployments/BalancerRewards.full.bin && mv BalancerRewards_full_sol_BalancerRewards.abi ./deployments/BalancerRewards.full.abi && rm *_sol_*"
   }
