@@ -1,10 +1,8 @@
 # reward-contract
 
-npm dist 
+> npm run delopy 
+generated flatter contract
 
-npm dist:Uniswap
-
-npm dist:Balancer
 
 
 
